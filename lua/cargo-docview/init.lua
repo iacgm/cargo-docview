@@ -270,7 +270,7 @@ local function process_json(cwd, lib, json)
 			goto continue
 		end
 
-		if kind == "type_alias" then
+		if kind == "type_alias" or kind == "trait_alias" then
 			kind = "alias" -- Saves space in telescope picker
 		end
 
@@ -294,7 +294,10 @@ local function process_json(cwd, lib, json)
 			module = {"module", "items"},
 			trait = {"trait", "items"},
 			impl = {"impl", "items"},
-			primitive = {"primitive", "impls"}
+			primitive = {"primitive", "impls"},
+			struct = {"struct", "impls"},
+			enum = {"enum", "impls"},
+			union = {"union", "impls"},
 		}
 
 		if containers[kind] then
@@ -363,14 +366,14 @@ function M.load_dep(lib, version)
 		return load_builtin(builtin_libs[lib])
 	end
 	local path = src_registry_path() .. "/" .. lib_path(lib, version)
-	local cmd = "cargo doc --no-deps --quiet"
+	local cmd = "cargo +nightly doc --no-deps --quiet"
 	local doc = vim.system(vim.split(cmd, " "), {
 		cwd = path,
 		env = {
 			RUSTDOCFLAGS = "-Zunstable-options -w json"
 		}
 	}):wait()
-	assert(doc.code == 0, "Cargo doc failed. Maybe Nightly is not installed?")
+	assert(doc.code == 0, "Cargo doc failed. Maybe Nightly is not installed? Error: " .. vim.inspect(doc.stderr))
 
 	local json = io.open(path .. "/target/doc/" .. lib .. ".json", 'r')
 	assert(json, "Unable to read file")
@@ -388,6 +391,11 @@ M.highlight_map = {
 	["function"] = "rustFunction",
 	["constant"] = "rustConstant",
 	["enum"] = "rustEnum",
+	["union"] = "rustUnion",
+	["primitive"] = "rustType",
+	["macro"] = "rustMacro",
+	["proc_derive"] = "rustDerive",
+	["proc_attribute"] = "rustAttribute",
 	["module"] = "rustModPath",
 	["trait"] = "rustTrait",
 	["variant"] = "rustEnumVariant"
